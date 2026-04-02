@@ -1,0 +1,299 @@
+{
+  "name": "Lesson Plan Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Generador de Plan de Clase",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Tema de la clase",
+              "fieldType": "textarea",
+              "placeholder": "Ej: Los verbos reflexivos — clase A2"
+            },
+            {
+              "fieldLabel": "Material",
+              "fieldType": "file",
+              "acceptFileTypes": "image/*"
+            }
+          ]
+        },
+        "options": {
+          "buttonLabel": "Generar plan →",
+          "customCss": "\n:root {\n  --color-background: #F8F5FF;\n  --color-card-bg: #FFFFFF;\n  --color-card-border: #E9E3FF;\n  --color-card-shadow: rgba(109, 40, 217, 0.08);\n  --color-header: #1E1B4B;\n  --color-label: #374151;\n  --color-link: #6B7280;\n  --color-input-border: #DDD6FE;\n  --color-input-text: #374151;\n  --color-focus-border: #7C3AED;\n  --color-submit-btn-bg: #7C3AED;\n  --color-submit-btn-text: #FFFFFF;\n  --color-required: #7C3AED;\n  --border-radius-card: 16px;\n  --border-radius-input: 10px;\n  --container-width: 480px;\n  --padding-card: 32px;\n  --submit-btn-height: 52px;\n}\n\nbody {\n  background: linear-gradient(150deg, #F3F0FF 0%, #FAF5FF 50%, #EDE9FE 100%);\n  min-height: 100vh;\n}\n\n.form-header h1 {\n  font-size: 22px;\n  font-weight: 700;\n  letter-spacing: -0.02em;\n  color: #1E1B4B;\n}\n\n.form-header p {\n  line-height: 1.6;\n  font-size: 13px;\n  color: #6B7280;\n  margin-top: 6px;\n}\n\nform label {\n  font-size: 13px;\n  font-weight: 600;\n  letter-spacing: 0.01em;\n  color: #374151;\n  margin-bottom: 6px;\n}\n\nform .form-input {\n  border: 1.5px solid #DDD6FE;\n  border-radius: 10px;\n  font-size: 14px;\n  color: #1F2937;\n  transition: border-color 0.2s ease, box-shadow 0.2s ease;\n}\n\nform .form-input:focus {\n  border-color: #7C3AED;\n  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);\n}\n\n#submit-btn {\n  background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);\n  border-radius: 12px;\n  font-size: 15px;\n  font-weight: 700;\n  letter-spacing: 0.02em;\n  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);\n  transition: box-shadow 0.2s ease, opacity 0.2s ease;\n}\n\n#submit-btn:hover {\n  opacity: 0.92;\n  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.45);\n}\n"
+        }
+      },
+      "id": "node-001",
+      "name": "On form submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [0, 0],
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b         = $input.item.binary || {};\nconst imageKeys = Object.keys(b).filter(k => b[k].mimeType && b[k].mimeType.startsWith('image/'));\nconst topic     = ($input.item.json['Tema de la clase'] || '').trim();\n\nif (!imageKeys.length && !topic) {\n  throw new Error('Por favor, escribe un tema o sube al menos una captura de pantalla.');\n}\n\nreturn [{\n  json: { imageKeys, topic, hasImages: imageKeys.length > 0 },\n  binary: $input.item.binary\n}];"
+      },
+      "id": "node-002",
+      "name": "Code — detect inputs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data      = $input.first();\nconst topic     = data.json.topic     || '';\nconst imageKeys = data.json.imageKeys;\nconst hasImages = data.json.hasImages;\n\nconst PROMPT_TOPIC_ONLY = \"ROLE\\nYou are an experienced Spanish teacher for A2-B1 level students. Your explanations must be clear, simple, structured, and engaging. Use accessible Spanish and avoid complex grammar explanations unless necessary.\\n\\nGOAL\\nCreate a complete, ready-to-teach Spanish lesson plan about the topic provided. Include vocabulary support, exercises with answers, and grammar tips.\\n\\nFORMATTING RULES \\u2014 FOLLOW STRICTLY\\n- Do NOT use markdown. No asterisks (*), no double asterisks (**), no underscores (_), no hashtags (#).\\n- Do NOT use _____ for blanks.\\n- Use CAPS for all section titles and exercise names.\\n- Use a dash (-) to separate a title from its description.\\n- Use plain numbered lists for answers.\\n- Use arrows (\\u2192) for vocabulary definitions and examples.\\n\\nINSTRUCTIONS\\n\\n1. Start with a brief, engaging greeting in Spanish to welcome students and introduce the lesson topic.\\n2. Create a VOCABULARY section with 8-12 key words related to the topic. Format: word \\u2192 definition. Example: sentence.\\n3. Create at least 3 different exercise types (fill-in-the-blank, true/false, matching, multiple choice) based on the vocabulary and topic. Include answers.\\nCRITICAL \\u2014 ANSWER FORMAT\\n- Fill-in-the-blank: write ONLY the missing word(s) per item\\n  WRONG: \\\"Hoy alguien me dijo algo que no me gust\\u00f3 para nada.\\\"\\n  RIGHT:  \\\"1. alguien, algo, nada\\\"\\n- True/False: write only Verdadero or Falso\\n  WRONG: \\\"Falso (Ana se levanta a las 7 de la ma\\u00f1ana...)\\\"\\n  RIGHT:  \\\"1. Falso\\\"\\n- Matching: write only the matched letter or number\\n- Multiple choice: write only the chosen option letter\\n- Vocabulary match: write only the word and its matched letter\\n4. After each exercise's answers, add a tip (use: \\ud83d\\udca1 Tip:) and an extra note (use: \\ud83d\\udccc Extra:).\\n5. Add an EXTRA VOCABULARY section with 5-8 more related words.\\n6. If the lesson involves grammar, add a GRAMMAR EXPLANATION section with a simple, easy-to-understand explanation that the teacher can read directly to the students. Use short sentences, simple examples, and avoid linguistic jargon.\\n7. Always add a CONVERSATION EXERCISE with real-life practice questions for outside the classroom.\\n8. Always add a REPORTES DE CLASE section with 3 different ready-made short messages in Spanish written directly to the student, like talking to them personally. Use [Nombre] as placeholder. Tone should be warm and direct, e.g. \\\"Buen trabajo hoy con [tema], [Nombre]!\\\" Each one should comment on what was covered and end with a \\\"Recuerda...\\\" tip. All 3 should sound natural and encouraging but worded differently so the teacher can pick the one that fits best.\\n\\nOUTPUT FORMAT EXAMPLE\\n\\n[Greeting paragraph in plain Spanish]\\n\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nEXERCISE NAME - One-line description\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\n1. answer\\n2. answer\\n\\n\\ud83d\\udca1 Tip: relevant tip here\\n\\ud83d\\udccc Extra: useful note here\\n\\nVOCABULARIO CLAVE\\nword \\u2192 brief definition. Example: sentence.\\n\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nEXTRA VOCABULARY\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nword \\u2192 brief definition. Example: sentence.\\n\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nGRAMMAR EXPLANATION\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\n[Simple, clear explanation the teacher can read to students]\\n\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nCONVERSATION\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\n[Conversation questions for real-life practice]\\n\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nREPORTES DE CLASE\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nREPORTE 1 - [Nombre]\\n[Comentario positivo sobre el tema de hoy]. Recuerda [consejo].\\n\\nREPORTE 2 - [Nombre]\\n[Diferente comentario positivo sobre el tema de hoy]. Recuerda [consejo].\\n\\nREPORTE 3 - [Nombre]\\n[Otro comentario positivo sobre el tema de hoy]. Recuerda [consejo].\";\nconst PROMPT_WITH_IMAGES = \"T\\u00cdTULO\\nBefore anything else, write a single line in this exact format \\u2014 no extra text:\\nT\\u00cdTULO: [lesson topic in 3\\u20136 words in Spanish, based on what the screenshots show]\\n\\nROLE\\nYou are an experienced Spanish teacher for A2-B1 level students. Your explanations must be clear, simple, structured, and engaging. Use accessible Spanish and avoid complex grammar explanations unless necessary.\\n\\nCONTEXT\\nYou are preparing a lesson using online learning material provided as screenshots. Work only with the text and exercises visible in the images. Do not invent content that is not in the screenshots.\\n\\nGOAL\\nTransform the material in the screenshots into a complete, ready-to-teach lesson, including vocabulary support, completed exercises, and explanations.\\n\\nFORMATTING RULES \\u2014 FOLLOW STRICTLY\\n- Do NOT use markdown. No asterisks (*), no double asterisks (**), no underscores (_), no hashtags (#).\\n- Do NOT use _____ for blanks.\\n- Use CAPS for all section titles and exercise names.\\n- Use a dash (-) to separate a title from its description.\\n- Use plain numbered lists for answers.\\n- Use arrows (\\u2192) for vocabulary definitions and examples.\\n\\nINSTRUCTIONS\\n\\n1. Start with a brief, engaging greeting in Spanish to welcome students and introduce the lesson topic.\\n2. Immediately after the greeting, present the exercises and their answers extracted from the screenshots.\\n3. Extract all text and exercises from the screenshots.\\n4. Identify all exercises (fill-in-the-blank, vocabulary, matching, true/false, reading comprehension).\\n5. If an exercise is based on a reading fragment or passage visible in the screenshots, include the full fragment text before the exercise answers.\\n6. For each exercise, write its name in CAPS and a one-line description of what it asks.\\n7. Then list ONLY the answers \\u2014 no full sentences, no repeated exercise text.\\nCRITICAL \\u2014 ANSWER FORMAT\\n- Fill-in-the-blank: write ONLY the missing word(s) per item\\n  WRONG: \\\"Hoy alguien me dijo algo que no me gust\\u00f3 para nada.\\\"\\n  RIGHT:  \\\"1. alguien, algo, nada\\\"\\n- True/False: write only Verdadero or Falso\\n  WRONG: \\\"Falso (Ana se levanta a las 7 de la ma\\u00f1ana...)\\\"\\n  RIGHT:  \\\"1. Falso\\\"\\n- Matching: write only the matched letter or number\\n- Multiple choice: write only the chosen option letter\\n- Vocabulary match: write only the word and its matched letter\\n8. After each exercise's answers, add a tip (use: \\ud83d\\udca1 Tip:) and an extra note (use: \\ud83d\\udccc Extra:).\\n9. For vocabulary exercises, add a VOCABULARIO CLAVE section right after with a brief definition and 1 example per word. Format: word \\u2192 definition. Example: sentence.\\n10. Always add an EXTRA VOCABULARY section related to the class theme. Format: word \\u2192 definition. Example: sentence.\\n11. If the lesson involves grammar, add a GRAMMAR EXPLANATION section with a simple, easy-to-understand explanation that the teacher can read directly to the students. Use short sentences, simple examples, and avoid linguistic jargon.\\n12. Always add a CONVERSATION EXERCISE with real-life practice questions for outside the classroom.\\n13. Always add a REPORTES DE CLASE section with 3 different ready-made short messages in Spanish written directly to the student, like talking to them personally. Use [Nombre] as placeholder. Tone should be warm and direct, e.g. \\\"Buen trabajo hoy con [tema], [Nombre]!\\\" Each one should comment on what was covered and end with a \\\"Recuerda...\\\" tip. All 3 should sound natural and encouraging but worded differently so the teacher can pick the one that fits best.\\n\\nOUTPUT FORMAT EXAMPLE\\n\\n[Greeting paragraph in plain Spanish]\\n\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nFRAGMENTO\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\n[Full reading passage text from the screenshot]\\n\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nEXERCISE NAME - One-line description\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\n1. answer\\n2. answer\\n\\n\\ud83d\\udca1 Tip: relevant tip here\\n\\ud83d\\udccc Extra: useful note here\\n\\n[If vocabulary exercise:]\\nVOCABULARIO CLAVE\\nword \\u2192 brief definition. Example: sentence.\\n\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nEXTRA VOCABULARY\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nword \\u2192 brief definition. Example: sentence.\\n\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nGRAMMAR EXPLANATION\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\n[Simple, clear explanation the teacher can read to students]\\n\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nCONVERSATION\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\n[Conversation questions for real-life practice]\\n\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nREPORTES DE CLASE\\n\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\u2014\\nREPORTE 1 - [Nombre]\\n[Comentario positivo sobre el tema de hoy]. Recuerda [consejo].\\n\\nREPORTE 2 - [Nombre]\\n[Diferente comentario positivo sobre el tema de hoy]. Recuerda [consejo].\\n\\nREPORTE 3 - [Nombre]\\n[Otro comentario positivo sobre el tema de hoy]. Recuerda [consejo].\";\n\nlet prompt;\nif (hasImages) {\n  prompt = PROMPT_WITH_IMAGES + (topic ? \"\\n\\nTEACHER NOTES:\\n\" + topic : '');\n} else {\n  prompt = PROMPT_TOPIC_ONLY + \"\\n\\nTOPIC:\\n\" + topic;\n}\n\nlet pageTitle;\nif (topic) {\n  pageTitle = topic;\n} else {\n  const b = data.binary || {};\n  const names = imageKeys\n    .map(k => (b[k] && b[k].fileName) ? b[k].fileName.replace(/\\.[^.]+$/, '') : k)\n    .filter((v, i, a) => a.indexOf(v) === i);\n  pageTitle = 'Plan de Clase';\n}\n\nreturn [{ json: { prompt, imageKeys, hasImages, pageTitle }, binary: data.binary }];"
+      },
+      "id": "node-003",
+      "name": "Code — build context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-images",
+              "leftValue": "={{ $json.hasImages }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-004",
+      "name": "IF — has images",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "={{ $json.prompt }}",
+        "inputType": "binary",
+        "binaryPropertyName": "={{ $json.imageKeys.join(',') }}",
+        "options": {}
+      },
+      "id": "node-005",
+      "name": "Gemini — image analyze",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [960, -160],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.prompt }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "node-006",
+      "name": "Gemini — text message",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [960, 160],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pageId": {
+          "__rl": true,
+          "value": "YOUR_NOTION_PAGE_URL",
+          "mode": "url"
+        },
+        "title": "={{ $('Code — build context').first().json.pageTitle }}",
+        "simple": false,
+        "options": {
+          "iconType": "emoji",
+          "icon": "\ud83d\udcda"
+        }
+      },
+      "id": "node-007",
+      "name": "Notion — Create Page",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [1440, 0],
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect Gemini output (handles image and text paths)\nlet items = [];\ntry { items = $('Gemini — image analyze').all(); } catch(e) {}\nif (!items.length) try { items = $('Gemini — text message').all(); } catch(e) {}\nif (!items.length) throw new Error('No Gemini output found.');\n\nlet text = items[0].json?.content?.parts?.[0]?.text;\nif (!text) throw new Error('Gemini returned no text. Check the uploaded material and try again.');\n\nconst pageId = $input.first().json.id;\n\n// Extract TÍTULO line if present (image path)\nlet newTitle = null;\nconst titleMatch = text.match(/^TÍTULO:\\s*(.+)/m);\nif (titleMatch) {\n  newTitle = titleMatch[1].trim();\n  // Remove that line from the text so it doesn't appear in blocks\n  text = text.replace(/^TÍTULO:\\s*.+\\n?/m, '').trimStart();\n}\n\n// Rich text helper — respects Notion's 2000-char limit per text object\nfunction rt(content) {\n  const result = [];\n  let s = String(content);\n  while (s.length > 0) {\n    result.push({ type: 'text', text: { content: s.slice(0, 2000) } });\n    s = s.slice(2000);\n  }\n  return result;\n}\n\nconst blocks = [];\nconst lines = text.split('\\n');\nlet afterOpenDivider = false;\nlet skipNextDivider  = false;\nlet introEnded       = false;\n\nfor (const rawLine of lines) {\n  const line = rawLine.trim();\n  if (!line) continue;\n\n  // ── Divider ───────────────────────────────────────────────────────\n  if (/^[—\\-]{6,}$/.test(line)) {\n    introEnded = true;\n    if (skipNextDivider) { skipNextDivider = false; continue; }\n    blocks.push({ object: 'block', type: 'divider', divider: {} });\n    afterOpenDivider = true;\n    continue;\n  }\n\n  // ── Section heading (right after opening divider) ─────────────────\n  if (afterOpenDivider) {\n    introEnded = true;\n    blocks.push({ object: 'block', type: 'heading_2',\n      heading_2: { rich_text: rt(line), is_toggleable: false } });\n    afterOpenDivider = false;\n    skipNextDivider  = true;\n    continue;\n  }\n\n  // ── Callout \ud83d\udca1 Tip ────────────────────────────────────────────────\n  if (line.startsWith('\ud83d\udca1')) {\n    introEnded = true;\n    const body = line.replace(/^\ud83d\udca1\\s*(Tip:)?\\s*/u, '').trim();\n    blocks.push({ object: 'block', type: 'callout',\n      callout: { rich_text: rt('Tip: ' + body),\n        icon: { type: 'emoji', emoji: '\ud83d\udca1' }, color: 'yellow_background' } });\n    continue;\n  }\n\n  // ── Callout \ud83d\udccc Extra ──────────────────────────────────────────────\n  if (line.startsWith('\ud83d\udccc')) {\n    introEnded = true;\n    const body = line.replace(/^\ud83d\udccc\\s*(Extra:)?\\s*/u, '').trim();\n    blocks.push({ object: 'block', type: 'callout',\n      callout: { rich_text: rt('Extra: ' + body),\n        icon: { type: 'emoji', emoji: '\ud83d\udccc' }, color: 'blue_background' } });\n    continue;\n  }\n\n  // ── Numbered list item ────────────────────────────────────────────\n  if (/^\\d+\\.\\s/.test(line)) {\n    introEnded = true;\n    blocks.push({ object: 'block', type: 'numbered_list_item',\n      numbered_list_item: { rich_text: rt(line.replace(/^\\d+\\.\\s*/, '')) } });\n    continue;\n  }\n\n  // ── Sub-heading (all-caps, no divider context) ────────────────────\n  if (line.length >= 3 && !/[a-záéíóúñü]/.test(line) && /[A-ZÁÉÍÓÚÑ]{2,}/.test(line)) {\n    introEnded = true;\n    blocks.push({ object: 'block', type: 'heading_3',\n      heading_3: { rich_text: rt(line), is_toggleable: false } });\n    continue;\n  }\n\n  // ── Vocabulary / definition bullet ( → ) ─────────────────────────\n  if (line.includes(' → ')) {\n    blocks.push({ object: 'block', type: 'bulleted_list_item',\n      bulleted_list_item: { rich_text: rt(line) } });\n    continue;\n  }\n\n  // ── Intro paragraph (before first structural marker) ─────────────\n  if (!introEnded) {\n    blocks.push({ object: 'block', type: 'quote',\n      quote: { rich_text: rt(line) } });\n    continue;\n  }\n\n  // ── Default: paragraph ────────────────────────────────────────────\n  blocks.push({ object: 'block', type: 'paragraph',\n    paragraph: { rich_text: rt(line) } });\n}\n\n// Batch into 100-block groups (Notion API hard limit per append call)\nconst BATCH = 100;\nconst result = [];\nfor (let i = 0; i < blocks.length; i += BATCH) {\n  const isFirst = i === 0;\n  const batchNewTitle = isFirst ? newTitle : null;\n  // Pre-build the PATCH body here so the HTTP node avoids expression-quote issues\n  const titlePatch = batchNewTitle\n    ? JSON.stringify({ properties: { title: { title: [{ type: 'text', text: { content: batchNewTitle } }] } } })\n    : '{}';\n  result.push({\n    json: {\n      pageId,\n      blocks: blocks.slice(i, i + BATCH),\n      newTitle: batchNewTitle,\n      titlePatch\n    }\n  });\n}\nreturn result.length ? result : [{ json: { pageId, blocks: [], newTitle: null, titlePatch: '{}' } }];"
+      },
+      "id": "node-008",
+      "name": "Code — build blocks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 0]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://api.notion.com/v1/pages/' + $json.pageId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Notion-Version", "value": "2022-06-28" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.titlePatch }}",
+        "options": {}
+      },
+      "id": "node-009",
+      "name": "HTTP — Notion update title",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1920, 0],
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ 'https://api.notion.com/v1/blocks/' + $('Code — build blocks').item.json.pageId + '/children' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Notion-Version", "value": "2022-06-28" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ children: $('Code — build blocks').item.json.blocks }) }}",
+        "options": {}
+      },
+      "id": "node-010",
+      "name": "HTTP — Notion append",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2160, 0],
+      "credentials": {
+        "notionApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "redirect",
+        "redirectUrl": "={{ $('Notion — Create Page').first().json.url }}",
+        "options": {}
+      },
+      "id": "node-011",
+      "name": "Form — completed",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [2400, 0],
+      "webhookId": "YOUR_WEBHOOK_ID"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [[{ "node": "Code — detect inputs", "type": "main", "index": 0 }]]
+    },
+    "Code — detect inputs": {
+      "main": [[{ "node": "Code — build context", "type": "main", "index": 0 }]]
+    },
+    "Code — build context": {
+      "main": [[{ "node": "IF — has images", "type": "main", "index": 0 }]]
+    },
+    "IF — has images": {
+      "main": [
+        [{ "node": "Gemini — image analyze", "type": "main", "index": 0 }],
+        [{ "node": "Gemini — text message", "type": "main", "index": 0 }]
+      ]
+    },
+    "Gemini — image analyze": {
+      "main": [[{ "node": "Notion — Create Page", "type": "main", "index": 0 }]]
+    },
+    "Gemini — text message": {
+      "main": [[{ "node": "Notion — Create Page", "type": "main", "index": 0 }]]
+    },
+    "Notion — Create Page": {
+      "main": [[{ "node": "Code — build blocks", "type": "main", "index": 0 }]]
+    },
+    "Code — build blocks": {
+      "main": [[{ "node": "HTTP — Notion update title", "type": "main", "index": 0 }]]
+    },
+    "HTTP — Notion update title": {
+      "main": [[{ "node": "HTTP — Notion append", "type": "main", "index": 0 }]]
+    },
+    "HTTP — Notion append": {
+      "main": [[{ "node": "Form — completed", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "00000000-0000-0000-0000-000000000000",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
